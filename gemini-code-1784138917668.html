@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ice Casino 🎰</title>
+    <!-- Подключаем официальный скрипт Telegram WebApp -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #1a233a;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 90vh;
+        }
+
+        h1 {
+            color: #4fc3f7;
+            margin-bottom: 5px;
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #8fa0c0;
+            margin-bottom: 25px;
+        }
+
+        /* Игровой автомат */
+        .slot-machine {
+            background: linear-gradient(145deg, #101626, #1e2942);
+            border: 4px solid #4fc3f7;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(79, 195, 247, 0.2);
+            width: 90%;
+            max-width: 320px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        /* Барабаны */
+        .reels-container {
+            display: flex;
+            justify-content: space-around;
+            background-color: #0b0f19;
+            border-radius: 12px;
+            padding: 15px 10px;
+            margin-bottom: 20px;
+            border: 2px solid #2c3a57;
+            overflow: hidden;
+        }
+
+        .reel {
+            width: 70px;
+            height: 70px;
+            background-color: #161f33;
+            border-radius: 8px;
+            font-size: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #3b4e75;
+            transition: transform 0.1s ease-out;
+        }
+
+        /* Поле ввода ставки */
+        .bet-container {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: #8fa0c0;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .bet-input-wrapper {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        input[type="number"] {
+            width: 100px;
+            background-color: #0b0f19;
+            border: 2px solid #3b4e75;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 18px;
+            padding: 8px;
+            text-align: center;
+            outline: none;
+        }
+
+        input[type="number"]:focus {
+            border-color: #4fc3f7;
+        }
+
+        /* Кнопка запуска */
+        .spin-btn {
+            background: linear-gradient(135deg, #00e676, #00b0ff);
+            color: #101626;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 35px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 230, 118, 0.4);
+            transition: all 0.2s ease;
+            width: 100%;
+            text-transform: uppercase;
+        }
+
+        .spin-btn:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 5px rgba(0, 230, 118, 0.2);
+        }
+
+        .spin-btn:disabled {
+            background: #3b4e75;
+            color: #8fa0c0;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .status-msg {
+            margin-top: 15px;
+            font-size: 14px;
+            min-height: 20px;
+            color: #ffb300;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ICE CASINO</h1>
+    <div class="subtitle">🎰 Хоккейные Слоты Mini App</div>
+
+    <div class="slot-machine">
+        <div class="reels-container">
+            <div id="reel1" class="reel">🏒</div>
+            <div id="reel2" class="reel">🏆</div>
+            <div id="reel3" class="reel">🏒</div>
+        </div>
+
+        <div class="bet-container">
+            <label for="bet-amount">Твоя ставка (ГРВ)</label>
+            <div class="bet-input-wrapper">
+                <input type="number" id="bet-amount" value="10" min="1" step="1">
+            </div>
+        </div>
+
+        <button id="spin-button" class="spin-btn" onclick="spin()">Крутить!</button>
+        <div id="status" class="status-msg">Введите ставку и нажмите «Крутить»</div>
+    </div>
+
+    <script>
+        // Инициализируем Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем окно на максимум
+
+        // Набор тематических хоккейных символов
+        const symbols = ["🏒", "🏒", "🏆", "🏆", "🥅", "⛸️", "🔥", "💎"];
+
+        function getRandomSymbol() {
+            return symbols[Math.floor(Math.random() * symbols.length)];
+        }
+
+        function spin() {
+            const betInput = document.getElementById("bet-amount");
+            const betAmount = parseFloat(betInput.value);
+            const statusDiv = document.getElementById("status");
+            const spinBtn = document.getElementById("spin-button");
+
+            if (isNaN(betAmount) || betAmount <= 0) {
+                statusDiv.innerText = "❌ Введите корректную ставку!";
+                return;
+            }
+
+            // Блокируем кнопку на время вращения
+            spinBtn.disabled = true;
+            statusDiv.innerText = "⚡ Барабаны крутятся...";
+
+            // Имитация кручения барабанов (быстрая смена эмодзи)
+            let count = 0;
+            const interval = setInterval(() => {
+                document.getElementById("reel1").innerText = getRandomSymbol();
+                document.getElementById("reel2").innerText = getRandomSymbol();
+                document.getElementById("reel3").innerText = getRandomSymbol();
+                count++;
+
+                if (count > 15) {
+                    clearInterval(interval);
+                    
+                    // Финальный результат
+                    const r1 = getRandomSymbol();
+                    const r2 = getRandomSymbol();
+                    const r3 = getRandomSymbol();
+
+                    document.getElementById("reel1").innerText = r1;
+                    document.getElementById("reel2").innerText = r2;
+                    document.getElementById("reel3").innerText = r3;
+
+                    evaluateResult(r1, r2, r3, betAmount);
+                    spinBtn.disabled = false;
+                }
+            }, 100);
+        }
+
+        function evaluateResult(r1, r2, r3, bet) {
+            const statusDiv = document.getElementById("status");
+            let winAmount = 0;
+            let resultType = "lose";
+
+            if (r1 === r2 && r2 === r3) {
+                // Три в ряд!
+                if (r1 === "💎") {
+                    winAmount = bet * 10; // Супер-джекпот
+                    resultType = "jackpot";
+                } else if (r1 === "🏆") {
+                    winAmount = bet * 5;
+                    resultType = "win";
+                } else {
+                    winAmount = bet * 3;
+                    resultType = "win";
+                }
+            } else if (r1 === r2 || r2 === r3 || r1 === r3) {
+                // Два совпадения
+                winAmount = bet * 1.5;
+                resultType = "partial";
+            }
+
+            if (winAmount > 0) {
+                statusDiv.innerHTML = `🟢 Выиграно: <b>${winAmount.toFixed(2)} ГРВ</b>!`;
+            } else {
+                statusDiv.innerHTML = `🔴 Потери: -${bet.toFixed(2)} ГРВ.`;
+            }
+
+            // Отправляем результат обратно боту в Telegram чат
+            const dataToSend = {
+                bet: bet,
+                win: winAmount,
+                result: resultType,
+                combination: `${r1} | ${r2} | ${r3}`
+            };
+
+            // Передаем JSON-строку в бота
+            tg.sendData(JSON.stringify(dataToSend));
+        }
+    </script>
+</body>
+</html>
